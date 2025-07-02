@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Solr数据同步管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .status-card {
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-connected {
+            border-left: 4px solid #28a745;
+        }
+
+        .status-disconnected {
+            border-left: 4px solid #dc3545;
+        }
+
+        .sync-progress {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<!-- 引入header -->
+<th:block th:replace="common/header :: header"></th:block>
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2><i class="fas fa-sync-alt"></i> Solr数据同步管理</h2>
+            <hr>
+        </div>
+    </div>
+
+    <!-- 状态卡片 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card status-card" id="statusCard">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-info-circle"></i> Solr连接状态
+                    </h5>
+                    <div id="statusContent">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin"></i> 检查中...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card status-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-database"></i> 数据统计
+                    </h5>
+                    <div id="dataStats">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin"></i> 加载中...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 操作按钮 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-cogs"></i> 操作面板
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100 mb-2" id="syncBtn">
+                                <i class="fas fa-sync-alt"></i> 同步所有数据
+                            </button>
+                            <small class="text-muted">将MySQL中的所有商品数据同步到Solr</small>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-warning w-100 mb-2" id="clearBtn">
+                                <i class="fas fa-trash"></i> 清空索引
+                            </button>
+                            <small class="text-muted">清空Solr索引</small>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-info w-100 mb-2" id="refreshBtn">
+                                <i class="fas fa-refresh"></i> 刷新状态
+                            </button>
+                            <small class="text-muted">重新检查Solr连接和数据状态</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 同步进度 -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card sync-progress" id="syncProgress">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-tasks"></i> 同步进度
+                    </h5>
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div class="text-center" id="syncMessage">
+                        准备同步...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志区域 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-list"></i> 操作日志
+                    </h5>
+                    <div id="logArea"
+                         style="height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px;">
+                        <div class="text-muted">等待操作...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Solr文档查看区域 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="fas fa-database"></i> Solr文档查看
+                    </h5>
+                    <div class="mb-2">
+                        <button class="btn btn-outline-secondary btn-sm" id="solrDocsPrev">上一页</button>
+                        <span id="solrDocsPageInfo">第 1 页</span>
+                        <button class="btn btn-outline-secondary btn-sm" id="solrDocsNext">下一页</button>
+                        <input type="number" min="1" class="form-control d-inline-block" id="solrDocsJumpInput" style="width:70px;display:inline-block;margin-left:10px;" placeholder="页码">
+                        <button class="btn btn-outline-primary btn-sm" id="solrDocsJumpBtn">跳转</button>
+                        <span class="ms-3">共 <span id="solrDocsTotal">0</span> 条</span>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="table table-bordered table-sm" id="solrDocsTable">
+                            <thead>
+                            <tr id="solrDocsHeader"></tr>
+                            </thead>
+                            <tbody id="solrDocsBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- 引入footer -->
+<th:block th:replace="common/footer :: footer"></th:block>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function () {
+        // 页面加载时检查状态
+        checkStatus();
+
+        // 同步按钮点击事件
+        $('#syncBtn').click(function () {
+            if (confirm('确定要同步所有数据到Solr吗？这可能需要一些时间。')) {
+                syncAllData();
+            }
+        });
+
+        // 清空按钮点击事件
+        $('#clearBtn').click(function () {
+            if (confirm('确定要清空Solr索引吗？这将删除所有索引数据。')) {
+                clearIndex();
+            }
+        });
+
+        // 刷新按钮点击事件
+        $('#refreshBtn').click(function () {
+            checkStatus();
+        });
+
+        // 检查Solr状态
+        function checkStatus() {
+            addLog('检查Solr连接状态...');
+
+            $.ajax({
+                url: '/solr/status',
+                method: 'GET',
+                success: function (response) {
+                    if (response.success) {
+                        updateStatusCard(response.connected, response.documentCount);
+                        addLog('状态检查完成');
+                    } else {
+                        updateStatusCard(false, 0);
+                        addLog('状态检查失败: ' + response.message);
+                    }
+                },
+                error: function () {
+                    updateStatusCard(false, 0);
+                    addLog('状态检查失败: 网络错误');
+                }
+            });
+        }
+
+        // 更新状态卡片
+        function updateStatusCard(connected, documentCount) {
+            let statusHtml = '';
+            let cardClass = '';
+
+            if (connected) {
+                statusHtml = `
+                        <div class="text-success">
+                            <i class="fas fa-check-circle"></i> 已连接
+                        </div>
+                        <div class="mt-2">
+                            <strong>文档数量:</strong> ${documentCount}
+                        </div>
+                    `;
+                cardClass = 'status-connected';
+            } else {
+                statusHtml = `
+                        <div class="text-danger">
+                            <i class="fas fa-times-circle"></i> 未连接
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">请检查Solr服务是否启动</small>
+                        </div>
+                    `;
+                cardClass = 'status-disconnected';
+            }
+
+            $('#statusCard').removeClass('status-connected status-disconnected').addClass(cardClass);
+            $('#statusContent').html(statusHtml);
+
+            // 更新数据统计
+            $('#dataStats').html(`
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-primary">${documentCount}</div>
+                            <small class="text-muted">Solr文档</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-success">${connected ? '正常' : '异常'}</div>
+                            <small class="text-muted">连接状态</small>
+                        </div>
+                    </div>
+                `);
+        }
+
+        // 同步所有数据
+        function syncAllData() {
+            $('#syncProgress').show();
+            $('#syncBtn').prop('disabled', true);
+            updateProgress(0, '开始同步数据...');
+
+            $.ajax({
+                url: '/solr/sync',
+                method: 'POST',
+                success: function (response) {
+                    if (response.success) {
+                        updateProgress(100, '同步完成！');
+                        addLog('数据同步成功，共同步 ' + response.documentCount + ' 条记录');
+                        setTimeout(function () {
+                            checkStatus();
+                            $('#syncProgress').hide();
+                            $('#syncBtn').prop('disabled', false);
+                        }, 2000);
+                    } else {
+                        updateProgress(0, '同步失败');
+                        addLog('数据同步失败: ' + response.message);
+                        $('#syncBtn').prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    updateProgress(0, '同步失败');
+                    addLog('数据同步失败: 网络错误');
+                    $('#syncBtn').prop('disabled', false);
+                }
+            });
+        }
+
+        // 清空索引
+        function clearIndex() {
+            addLog('开始清空索引...');
+
+            $.ajax({
+                url: '/solr/clear',
+                method: 'DELETE',
+                success: function (response) {
+                    if (response.success) {
+                        addLog('索引清空成功');
+                        checkStatus();
+                    } else {
+                        addLog('索引清空失败: ' + response.message);
+                    }
+                },
+                error: function () {
+                    addLog('索引清空失败: 网络错误');
+                }
+            });
+        }
+
+        // 更新进度条
+        function updateProgress(percent, message) {
+            $('.progress-bar').css('width', percent + '%');
+            $('#syncMessage').text(message);
+        }
+
+        // 添加日志
+        function addLog(message) {
+            let timestamp = new Date().toLocaleTimeString();
+            let logEntry = `<div>[${timestamp}] ${message}</div>`;
+            $('#logArea').append(logEntry);
+            $('#logArea').scrollTop($('#logArea')[0].scrollHeight);
+        }
+
+        // ========== Solr文档查看功能 ==========
+        let solrDocsPage = 1;
+        let solrDocsSize = 10;
+        let solrDocsTotal = 0;
+
+        function loadSolrDocs(page) {
+            $.get('/solr/all', {page: page, size: solrDocsSize}, function (res) {
+                if (res.success) {
+                    solrDocsTotal = res.total;
+                    $('#solrDocsTotal').text(solrDocsTotal);
+                    $('#solrDocsPageInfo').text('第 ' + res.page + ' 页');
+                    renderSolrDocsTable(res.docs);
+                } else {
+                    $('#solrDocsBody').html('<tr><td colspan="20">加载失败: ' + res.message + '</td></tr>');
+                }
+            });
+        }
+
+        function renderSolrDocsTable(docs) {
+            if (!docs || docs.length === 0) {
+                $('#solrDocsHeader').html('');
+                $('#solrDocsBody').html('<tr><td colspan="20">暂无数据</td></tr>');
+                return;
+            }
+            // 动态渲染表头
+            let firstDoc = docs[0];
+            let headers = Object.keys(firstDoc);
+            let headerHtml = headers.map(h => '<th>' + h + '</th>').join('');
+            $('#solrDocsHeader').html(headerHtml);
+            // 渲染数据
+            let bodyHtml = docs.map(doc => {
+                return '<tr>' + headers.map(h => '<td>' + (doc[h] !== undefined ? doc[h] : '') + '</td>').join('') + '</tr>';
+            }).join('');
+            $('#solrDocsBody').html(bodyHtml);
+        }
+
+        $('#solrDocsPrev').click(function () {
+            if (solrDocsPage > 1) {
+                solrDocsPage--;
+                loadSolrDocs(solrDocsPage);
+            }
+        });
+        $('#solrDocsNext').click(function () {
+            if (solrDocsPage * solrDocsSize < solrDocsTotal) {
+                solrDocsPage++;
+                loadSolrDocs(solrDocsPage);
+            }
+        });
+
+        $('#solrDocsJumpBtn').click(function () {
+            let val = parseInt($('#solrDocsJumpInput').val());
+            if (!isNaN(val) && val > 0 && (val - 1) * solrDocsSize < solrDocsTotal) {
+                solrDocsPage = val;
+                loadSolrDocs(solrDocsPage);
+            } else {
+                alert('请输入有效页码');
+            }
+        });
+
+        // 页面加载时自动加载第一页
+        loadSolrDocs(solrDocsPage);
+    });
+</script>
+</body>
+</html> 

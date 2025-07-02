@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>类目管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+<th:block th:replace="common/header :: header"></th:block>
+<div class="container mt-4">
+    <h2>类目管理</h2>
+    <div class="alert alert-success" th:if="${msg}" th:text="${msg}"></div>
+    <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
+    <!-- 添加/编辑表单 -->
+    <form class="row g-3 mb-4" method="post"
+          th:action="${editMode} ? @{/product/category/update} : @{/product/category/add}" th:object="${category}">
+        <input th:field="*{id}" type="hidden"/>
+        <div class="col-md-3">
+            <input class="form-control" placeholder="类目名称" required th:field="*{name}" type="text">
+        </div>
+        <div class="col-md-2">
+            <input class="form-control" placeholder="父ID" th:field="*{parentId}" type="number">
+        </div>
+        <div class="col-md-2">
+            <input class="form-control" placeholder="层级" th:field="*{level}" type="number">
+        </div>
+        <div class="col-md-2">
+            <input class="form-control" placeholder="排序" th:field="*{sort}" type="number">
+        </div>
+        <div class="col-md-1">
+            <select class="form-select" th:field="*{status}">
+                <option th:text="'启用'" th:value="1"></option>
+                <option th:text="'禁用'" th:value="0"></option>
+            </select>
+        </div>
+        <div class="col-md-2 d-flex">
+            <button class="btn btn-primary w-100" th:text="${editMode} ? '保存' : '添加'" type="submit"></button>
+            <a class="btn btn-secondary ms-2" th:href="@{/product/category}" th:if="${editMode}">取消</a>
+        </div>
+    </form>
+    <!-- 类目列表 -->
+    <table class="table table-bordered table-hover">
+        <thead class="table-light">
+        <tr>
+            <th>ID</th>
+            <th>名称</th>
+            <th>父ID</th>
+            <th>层级</th>
+            <th>排序</th>
+            <th>状态</th>
+            <th>操作</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="category : ${categories}">
+            <td th:text="${category.id}"></td>
+            <td th:text="${category.name}"></td>
+            <td th:text="${category.parentId}"></td>
+            <td th:text="${category.level}"></td>
+            <td th:text="${category.sort}"></td>
+            <td th:text="${category.status == 1 ? '启用' : '禁用'}"></td>
+            <td>
+                <a class="btn btn-sm btn-warning" th:href="@{'/product/category/edit/' + ${category.id}}">编辑</a>
+                <form method="post" onsubmit="return confirm('确定要删除该类目吗？')"
+                      style="display:inline-block" th:action="@{'/product/category/delete/' + ${category.id}}">
+                    <button class="btn btn-sm btn-danger" type="submit">删除</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+<th:block th:replace="common/footer :: footer"></th:block>
+</body>
+</html> 

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.solrdemo.mapper.ProductMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.solrdemo.entity.Product">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="category_id" property="categoryId" jdbcType="BIGINT"/>
+        <result column="category_name" property="categoryName" jdbcType="VARCHAR"/>
+        <result column="brand_id" property="brandId" jdbcType="BIGINT"/>
+        <result column="brand_name" property="brandName" jdbcType="VARCHAR"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="image" property="image" jdbcType="VARCHAR"/>
+        <result column="stock" property="stock" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="INTEGER"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, category_id, category_name, brand_id, brand_name, price, description, 
+        image, stock, status, create_time, update_time
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM product
+        WHERE status = 1
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM product
+        WHERE id = #{id} AND status = 1
+    </select>
+
+    <select id="selectBySearch" parameterType="com.example.solrdemo.dto.ProductSearchDTO" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM product
+        WHERE status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="categoryIds != null and categoryIds.size() > 0">
+            AND category_id IN
+            <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
+                #{categoryId}
+            </foreach>
+        </if>
+        <if test="brandIds != null and brandIds.size() > 0">
+            AND brand_id IN
+            <foreach collection="brandIds" item="brandId" open="(" separator="," close=")">
+                #{brandId}
+            </foreach>
+        </if>
+        <if test="minPrice != null">
+            AND price >= #{minPrice}
+        </if>
+        <if test="maxPrice != null">
+            AND price &lt;= #{maxPrice}
+        </if>
+        <choose>
+            <when test="sortField != null and sortField != ''">
+                ORDER BY ${sortField} ${sortOrder}
+            </when>
+            <otherwise>
+                ORDER BY create_time DESC
+            </otherwise>
+        </choose>
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countBySearch" parameterType="com.example.solrdemo.dto.ProductSearchDTO" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM product
+        WHERE status = 1
+        <if test="keyword != null and keyword != ''">
+            AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="categoryIds != null and categoryIds.size() > 0">
+            AND category_id IN
+            <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
+                #{categoryId}
+            </foreach>
+        </if>
+        <if test="brandIds != null and brandIds.size() > 0">
+            AND brand_id IN
+            <foreach collection="brandIds" item="brandId" open="(" separator="," close=")">
+                #{brandId}
+            </foreach>
+        </if>
+        <if test="minPrice != null">
+            AND price >= #{minPrice}
+        </if>
+        <if test="maxPrice != null">
+            AND price &lt;= #{maxPrice}
+        </if>
+    </select>
+
+    <select id="selectByCategoryIds" parameterType="java.util.List" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM product
+        WHERE status = 1 AND category_id IN
+        <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
+            #{categoryId}
+        </foreach>
+    </select>
+
+    <select id="selectByBrandIds" parameterType="java.util.List" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM product
+        WHERE status = 1 AND brand_id IN
+        <foreach collection="brandIds" item="brandId" open="(" separator="," close=")">
+            #{brandId}
+        </foreach>
+    </select>
+
+    <insert id="insert" parameterType="com.example.solrdemo.entity.Product" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO product (name, category_id, category_name, brand_id, brand_name, price, description,
+                             image, stock, status, create_time, update_time)
+        VALUES (#{name}, #{categoryId}, #{categoryName}, #{brandId}, #{brandName}, #{price}, #{description},
+                #{image}, #{stock}, #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.example.solrdemo.entity.Product">
+        UPDATE product
+        SET name          = #{name},
+            category_id   = #{categoryId},
+            category_name = #{categoryName},
+            brand_id      = #{brandId},
+            brand_name    = #{brandName},
+            price         = #{price},
+            description   = #{description},
+            image         = #{image},
+            stock         = #{stock},
+            status        = #{status},
+            update_time   = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE
+        FROM product
+        WHERE id = #{id}
+    </delete>
+
+    <update id="updateBrandNameByBrandId">
+        UPDATE product
+        SET brand_name = #{brandName}
+        WHERE brand_id = #{brandId}
+    </update>
+
+    <update id="updateCategoryNameByCategoryId">
+        UPDATE product
+        SET category_name = #{categoryName}
+        WHERE category_id = #{categoryId}
+    </update>
+
+</mapper> 

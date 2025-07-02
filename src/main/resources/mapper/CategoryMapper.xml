@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.solrdemo.mapper.CategoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.solrdemo.entity.Category">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="parent_id" property="parentId" jdbcType="BIGINT"/>
+        <result column="level" property="level" jdbcType="INTEGER"/>
+        <result column="sort" property="sort" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="INTEGER"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, parent_id, level, sort, status, create_time, update_time
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM category
+        WHERE status = 1
+        ORDER BY sort ASC, create_time DESC
+    </select>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM category
+        WHERE id = #{id} AND status = 1
+    </select>
+
+    <select id="selectByParentId" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM category
+        WHERE parent_id = #{parentId} AND status = 1
+        ORDER BY sort ASC, create_time DESC
+    </select>
+
+    <select id="selectByLevel" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM category
+        WHERE level = #{level} AND status = 1
+        ORDER BY sort ASC, create_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.example.solrdemo.entity.Category" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO category (name, parent_id, level, sort, status, create_time, update_time)
+        VALUES (#{name}, #{parentId}, #{level}, #{sort}, #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.example.solrdemo.entity.Category">
+        UPDATE category
+        SET name = #{name},
+            parent_id = #{parentId},
+            level = #{level},
+            sort = #{sort},
+            status = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM category WHERE id = #{id}
+    </delete>
+
+</mapper> 

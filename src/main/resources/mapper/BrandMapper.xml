@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.solrdemo.mapper.BrandMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.solrdemo.entity.Brand">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="logo" property="logo" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="sort" property="sort" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="INTEGER"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, name, logo, description, sort, status, create_time, update_time
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM brand
+        WHERE status = 1
+        ORDER BY sort ASC, create_time DESC
+    </select>
+
+    <select id="selectById" parameterType="java.lang.Long" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM brand
+        WHERE id = #{id} AND status = 1
+    </select>
+
+    <select id="selectByStatus" parameterType="java.lang.Integer" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM brand
+        WHERE status = #{status}
+        ORDER BY sort ASC, create_time DESC
+    </select>
+
+    <insert id="insert" parameterType="com.example.solrdemo.entity.Brand" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO brand (name, logo, description, sort, status, create_time, update_time)
+        VALUES (#{name}, #{logo}, #{description}, #{sort}, #{status}, NOW(), NOW())
+    </insert>
+
+    <update id="update" parameterType="com.example.solrdemo.entity.Brand">
+        UPDATE brand
+        SET name = #{name},
+            logo = #{logo},
+            description = #{description},
+            sort = #{sort},
+            status = #{status},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById" parameterType="java.lang.Long">
+        DELETE FROM brand WHERE id = #{id}
+    </delete>
+
+</mapper> 
