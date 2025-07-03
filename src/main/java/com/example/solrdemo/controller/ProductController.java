@@ -5,8 +5,10 @@ import com.example.solrdemo.dto.ProductSearchResult;
 import com.example.solrdemo.entity.Brand;
 import com.example.solrdemo.entity.Category;
 import com.example.solrdemo.entity.Product;
+import com.example.solrdemo.entity.ProductAttribute;
 import com.example.solrdemo.mapper.BrandMapper;
 import com.example.solrdemo.mapper.CategoryMapper;
+import com.example.solrdemo.service.ProductAttributeService;
 import com.example.solrdemo.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -14,8 +16,12 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/product")
@@ -28,6 +34,8 @@ public class ProductController {
 
     @Autowired
     private ProductService productService;
+    @Autowired
+    private ProductAttributeService productAttributeService;
 
     /**
      * 商品列表页面
@@ -67,6 +75,7 @@ public class ProductController {
         model.addAttribute("products", result.getProducts());
         model.addAttribute("categories", result.getCategories());
         model.addAttribute("brands", result.getBrands());
+        model.addAttribute("attributeFacets", result.getAttributeFacets());
         model.addAttribute("priceRange", result.getPriceRange());
         model.addAttribute("total", result.getTotal());
         model.addAttribute("page", result.getPage());
@@ -106,9 +115,40 @@ public class ProductController {
     }
 
     @PostMapping("/add")
-    public String addProduct(@ModelAttribute Product product, RedirectAttributes redirectAttributes) {
-        productService.addProduct(product);
-        redirectAttributes.addFlashAttribute("msg", "商品添加成功！");
+    public String addProduct(@ModelAttribute Product product, 
+                           HttpServletRequest request,
+                           RedirectAttributes redirectAttributes) {
+        try {
+            System.out.println("=== 开始处理商品添加请求 ===");
+            System.out.println("商品信息: " + product.getName() + ", 类目ID: " + product.getCategoryId());
+            
+            // 手动解析属性参数
+            Map<String, String> attributes = new HashMap<>();
+            Enumeration<String> paramNames = request.getParameterNames();
+            
+            System.out.println("所有参数名:");
+            while (paramNames.hasMoreElements()) {
+                String paramName = paramNames.nextElement();
+                System.out.println("参数: " + paramName + " = " + request.getParameter(paramName));
+                
+                if (paramName.startsWith("attributes[")) {
+                    String attributeCode = paramName.substring(11, paramName.length() - 1); // 去掉 "attributes[" 和 "]"
+                    String attributeValue = request.getParameter(paramName);
+                    if (attributeValue != null && !attributeValue.trim().isEmpty()) {
+                        attributes.put(attributeCode, attributeValue);
+                        System.out.println("解析属性: " + attributeCode + " = " + attributeValue);
+                    }
+                }
+            }
+            
+            System.out.println("解析后的属性: " + attributes);
+            
+            productService.addProductWithAttributes(product, attributes);
+            redirectAttributes.addFlashAttribute("msg", "商品添加成功！");
+        } catch (Exception e) {
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("error", "商品添加失败：" + e.getMessage());
+        }
         return "redirect:/product/list";
     }
 
@@ -119,7 +159,12 @@ public class ProductController {
             // 可自定义404页面
             return "redirect:/product/list";
         }
+        
+        // 查询商品属性
+        List<ProductAttribute> productAttributes = productAttributeService.getAttributesByProductId(id);
+        
         model.addAttribute("product", product);
+        model.addAttribute("productAttributes", productAttributes);
         return "product/detail";
     }
 } 

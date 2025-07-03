@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>类目属性管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <div th:replace="common/header :: header"></div>
+
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>类目属性管理</h2>
+                    <div>
+                        <a class="btn btn-outline-secondary me-2" href="/product/category">
+                            <i class="bi bi-arrow-left"></i> 返回类目管理
+                        </a>
+                        <button class="btn btn-primary" onclick="showAddForm()">
+                            <i class="bi bi-plus"></i> 添加属性
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 属性列表 -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>属性名称</th>
+                                        <th>属性编码</th>
+                                        <th>属性类型</th>
+                                        <th>选项值</th>
+                                        <th>单位</th>
+                                        <th>排序</th>
+                                        <th>必填</th>
+                                        <th>状态</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attributeTable">
+                                    <tr th:each="attr : ${attributes}">
+                                        <td th:text="${attr.attributeName}"></td>
+                                        <td th:text="${attr.attributeCode}"></td>
+                                        <td th:text="${attr.attributeType}"></td>
+                                        <td th:text="${attr.options}"></td>
+                                        <td th:text="${attr.unit}"></td>
+                                        <td th:text="${attr.sort}"></td>
+                                        <td>
+                                            <span th:if="${attr.required == 1}" class="badge bg-success">是</span>
+                                            <span th:if="${attr.required == 0}" class="badge bg-secondary">否</span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${attr.status == 1}" class="badge bg-success">启用</span>
+                                            <span th:if="${attr.status == 0}" class="badge bg-danger">禁用</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" th:onclick="'editAttribute(' + ${attr.id} + ')'">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" th:onclick="'deleteAttribute(' + ${attr.id} + ')'">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑属性模态框 -->
+    <div class="modal fade" id="attributeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">添加属性</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="attributeForm">
+                        <input type="hidden" id="attributeId" name="id">
+                        <input type="hidden" id="categoryId" name="categoryId" th:value="${categoryId}">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="attributeName" class="form-label">属性名称 *</label>
+                                    <input type="text" class="form-control" id="attributeName" name="attributeName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="attributeCode" class="form-label">属性编码 *</label>
+                                    <input type="text" class="form-control" id="attributeCode" name="attributeCode" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="attributeType" class="form-label">属性类型 *</label>
+                                    <select class="form-select" id="attributeType" name="attributeType" required>
+                                        <option value="">请选择</option>
+                                        <option value="text">文本</option>
+                                        <option value="number">数字</option>
+                                        <option value="select">选择</option>
+                                        <option value="range">范围</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="unit" class="form-label">单位</label>
+                                    <input type="text" class="form-control" id="unit" name="unit">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="options" class="form-label">选项值（JSON格式，用于选择类型）</label>
+                            <textarea class="form-control" id="options" name="options" rows="3" 
+                                      placeholder='["选项1", "选项2", "选项3"]'></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="sort" class="form-label">排序</label>
+                                    <input type="number" class="form-control" id="sort" name="sort" value="0">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="required" class="form-label">是否必填</label>
+                                    <select class="form-select" id="required" name="required">
+                                        <option value="0">否</option>
+                                        <option value="1">是</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="status" class="form-label">状态</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="1">启用</option>
+                                        <option value="0">禁用</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAttribute()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="common/footer :: footer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let isEdit = false;
+        const attributeModal = new bootstrap.Modal(document.getElementById('attributeModal'));
+
+        function showAddForm() {
+            isEdit = false;
+            document.getElementById('modalTitle').textContent = '添加属性';
+            document.getElementById('attributeForm').reset();
+            document.getElementById('attributeId').value = '';
+            attributeModal.show();
+        }
+
+        function editAttribute(id) {
+            isEdit = true;
+            document.getElementById('modalTitle').textContent = '编辑属性';
+            
+            // 获取属性详情
+            fetch(`/product/attribute/detail?id=${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('attributeId').value = data.id;
+                    document.getElementById('attributeName').value = data.attributeName;
+                    document.getElementById('attributeCode').value = data.attributeCode;
+                    document.getElementById('attributeType').value = data.attributeType;
+                    document.getElementById('options').value = data.options;
+                    document.getElementById('unit').value = data.unit;
+                    document.getElementById('sort').value = data.sort;
+                    document.getElementById('required').value = data.required;
+                    document.getElementById('status').value = data.status;
+                    attributeModal.show();
+                })
+                .catch(error => {
+                    alert('获取属性详情失败：' + error);
+                });
+        }
+
+        function saveAttribute() {
+            const formData = new FormData(document.getElementById('attributeForm'));
+            const data = Object.fromEntries(formData.entries());
+            
+            const url = isEdit ? '/product/attribute/update' : '/product/attribute/add';
+            const method = 'POST';
+            
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.text())
+            .then(result => {
+                if (result.startsWith('success')) {
+                    attributeModal.hide();
+                    location.reload();
+                } else {
+                    alert('操作失败：' + result);
+                }
+            })
+            .catch(error => {
+                alert('操作失败：' + error);
+            });
+        }
+
+        function deleteAttribute(id) {
+            if (confirm('确定要删除这个属性吗？')) {
+                fetch('/product/attribute/delete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `id=${id}`
+                })
+                .then(response => response.text())
+                .then(result => {
+                    if (result.startsWith('success')) {
+                        location.reload();
+                    } else {
+                        alert('删除失败：' + result);
+                    }
+                })
+                .catch(error => {
+                    alert('删除失败：' + error);
+                });
+            }
+        }
+    </script>
+</body>
+</html> 

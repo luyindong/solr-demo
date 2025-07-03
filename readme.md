@@ -9,8 +9,10 @@
 - 商品管理：增删改查，支持品牌、类目、价格、关键词等多条件筛选
 - 品牌管理：增删改查，支持状态切换，编辑时自动同步商品冗余字段与Solr索引
 - 类目管理：增删改查，支持状态切换，编辑时自动同步商品冗余字段与Solr索引
+- 类目属性管理：支持为不同类目定义自定义属性（文本、数字、选择、范围），实现动态筛选
+- 商品属性管理：支持为商品设置具体的属性值
 - Solr数据同步：支持全量同步、单商品同步、分面统计联动
-- 分面筛选：商品列表页支持品牌、类目、价格等多维度动态筛选
+- 分面筛选：商品列表页支持品牌、类目、价格、动态属性等多维度筛选
 - 前后端分离友好，支持AJAX动态搜索
 
 ---
@@ -59,7 +61,7 @@ solr-demo/
 
 ## 启动方式
 1. **准备数据库和Solr**
-   - 创建MySQL数据库，导入表结构和初始数据（可根据entity和mapper自行建表）
+   - 创建MySQL数据库，导入表结构和初始数据（参考src/main/resources/db/schema.sql）
    - 启动Solr服务，创建对应的core（如product），schema需包含所有商品字段
    - ```bash
         <field name="brand_id" type="pint" uninvertible="true" indexed="true" stored="true"/>
@@ -89,6 +91,9 @@ solr-demo/
    - 商品列表：http://localhost:8080/product/list
    - 品牌管理：http://localhost:8080/product/brand
    - 类目管理：http://localhost:8080/product/category
+   - 类目属性管理：http://localhost:8080/product/attribute/list?categoryId=1
+   - 属性功能测试：http://localhost:8080/product/test-attribute
+   - 属性同步测试：http://localhost:8080/product/test-attribute-sync
    - Solr同步管理：http://localhost:8080/admin/solr-sync
 
 ---
@@ -108,8 +113,19 @@ solr-demo/
 
 ### 3. 商品搜索与分面筛选
 - 支持关键词、品牌、类目、价格区间等多条件组合筛选
+- 支持动态属性筛选：根据选择的类目动态加载对应的属性筛选选项
+- 属性筛选支持多种类型：文本输入、数字范围、多选选项等
 - Solr分面统计实现品牌、类目筛选项联动，前端AJAX动态渲染
 - 商品详情页展示品牌、类目信息
+
+### 4. 动态属性系统
+- 类目属性管理：为每个类目定义自定义属性，支持文本、数字、选择、范围四种类型
+- 商品属性管理：为商品设置具体的属性值，支持批量操作
+- 商品添加页面：选择类目后动态加载属性填写表单
+- 商品详情页面：展示商品的所有属性信息
+- 动态筛选：根据选择的类目自动加载对应的属性筛选选项
+- 属性值支持多种格式：单选、多选、范围查询等
+- 属性同步到Solr：商品属性自动同步到Solr索引，字段命名规则为`attr_{attributeCode}`，支持属性筛选和全文搜索
 
 ---
 

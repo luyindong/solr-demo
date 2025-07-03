@@ -20,6 +20,20 @@
             <p class="text-muted mb-1">类目：<span th:text="${product.categoryName}">类目</span></p>
             <h4 class="text-danger mb-3">¥<span th:text="${product.price}">0.00</span></h4>
             <p>库存：<span th:text="${product.stock}">0</span></p>
+            
+            <!-- 商品属性信息 -->
+            <div th:if="${not #lists.isEmpty(productAttributes)}" class="mt-3">
+                <h5>商品属性</h5>
+                <div class="row">
+                    <div th:each="attr : ${productAttributes}" class="col-md-6 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted" th:text="${attr.attributeName} + '：'">属性名：</span>
+                            <span th:text="${attr.attributeValue}">属性值</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <hr>
             <h5>商品描述</h5>
             <p th:text="${product.description}">暂无描述</p>

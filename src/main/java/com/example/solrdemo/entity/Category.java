@@ -13,4 +13,6 @@ public class Category {
     private Integer status;       // 0-禁用 1-启用
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+    // 嵌套子类目
+    private java.util.List<Category> children = new java.util.ArrayList<>();
 } 

@@ -168,6 +168,29 @@
                     </div>
                 </div>
 
+                <!-- 动态属性筛选 -->
+                <div class="filter-item" id="attributeFilters">
+                    <div class="filter-title">属性筛选</div>
+                    <div id="attributeFilterContent">
+                        <!-- 服务端渲染的属性筛选选项 -->
+                        <div th:if="${attributeFacets != null and !attributeFacets.isEmpty()}">
+                            <div class="attribute-filter mb-3" th:each="entry : ${attributeFacets}">
+                                <div class="filter-title" th:text="${entry.value[0].name}">属性名称</div>
+                                <div class="filter-option" th:each="option : ${entry.value}">
+                                    <input th:data-code="${option.code}" th:id="'attr-' + ${option.code} + '-' + ${option.value}"
+                                           th:value="${option.value}"
+                                           type="checkbox">
+                                    <label th:for="'attr-' + ${option.code} + '-' + ${option.value}"
+                                           th:text="${option.value} + ' (' + ${option.count} + ')'">选项</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-muted" th:if="${attributeFacets == null or attributeFacets.isEmpty()}">
+                            请先选择类目
+                        </div>
+                    </div>
+                </div>
+
                 <!-- 排序 -->
                 <div class="filter-item">
                     <div class="filter-title">排序</div>
@@ -265,8 +288,30 @@
                 sortField: $('#sortField').val(),
                 sortOrder: $('#sortOrder').val(),
                 page: currentPage,
-                size: 20
+                size: 20,
+                attributes: getAttributeFilters()
             };
+        }
+
+        // 获取属性筛选参数
+        function getAttributeFilters() {
+            let attributes = {};
+            $('#attributeFilterContent input[type="checkbox"]:checked').each(function () {
+                let attributeCode = $(this).data('code');
+                let attributeValue = $(this).val();
+
+                if (!attributes[attributeCode]) {
+                    attributes[attributeCode] = [];
+                }
+                attributes[attributeCode].push(attributeValue);
+            });
+            return attributes;
+        }
+
+        // 属性筛选选项已通过服务端渲染，无需动态加载
+        function loadAttributeFilters() {
+            // 服务端已渲染，这里可以添加其他逻辑
+            console.log('属性筛选选项已通过服务端渲染');
         }
 
         // 获取选中的值
@@ -365,7 +410,7 @@
                                <div class="card product-card">
                                 <img src="${product.image && product.image !== '' ? product.image : '/images/default.jpeg'}" alt="${product.name}" class="card-img-top product-image">
                                 <div class="card-body">
-                                  <h6 class="card-title" th:text="${product.name}">商品名称</h6>
+                                  <h6 class="card-title">${product.name}</h6>
                                     <p class="category-name">${product.categoryName}</p>
                                     <p class="brand-name">${product.brandName}</p>
                                     <div class="d-flex justify-content-between align-items-center">
@@ -420,6 +465,40 @@
                     `;
             });
             $('#brandFilters').html(brandHtml);
+            // 属性分面渲染
+            let attrHtml = '';
+            if (response.attributeFacets) {
+                Object.keys(response.attributeFacets).forEach(function (code) {
+                    let options = response.attributeFacets[code];
+                    if (options.length > 0) {
+                        attrHtml += `<div class="attribute-filter mb-3">`;
+                        attrHtml += `<div class="filter-title">${options[0].name}</div>`;
+                        options.forEach(function (option) {
+                            // 判断是否选中
+                            let checked = '';
+                            if (searchParams.attributes && searchParams.attributes[code]) {
+                                // 支持多选
+                                if (Array.isArray(searchParams.attributes[code])) {
+                                    if (searchParams.attributes[code].includes(option.value)) {
+                                        checked = 'checked';
+                                    }
+                                } else if (searchParams.attributes[code] === option.value) {
+                                    checked = 'checked';
+                                }
+                            }
+                            attrHtml += `<div class="filter-option">`;
+                            attrHtml += `<input type="checkbox" value="${option.value}" id="attr-${option.code}-${option.value}" data-code="${option.code}" ${checked}>`;
+                            attrHtml += `<label for="attr-${option.code}-${option.value}">${option.value} (${option.count})</label>`;
+                            attrHtml += `</div>`;
+                        });
+                        attrHtml += `</div>`;
+                    }
+                });
+            }
+            if (!attrHtml) {
+                attrHtml = '<div class="text-muted">请先选择类目</div>';
+            }
+            $('#attributeFilterContent').html(attrHtml);
         }
 
         // 搜索按钮点击事件
@@ -434,6 +513,11 @@
             currentPage = 1;
             initSearchParams();
             performSearch();
+        });
+
+        // 类目变化时加载属性筛选
+        $(document).on('change', 'input[id^="cat-"]', function () {
+            loadAttributeFilters();
         });
 
         // 分页点击事件

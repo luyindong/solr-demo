@@ -4,40 +4,19 @@
     <meta charset="UTF-8">
     <title>类目管理</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
 </head>
 <body>
 <th:block th:replace="common/header :: header"></th:block>
 <div class="container mt-4">
-    <h2>类目管理</h2>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>类目管理</h2>
+        <button class="btn btn-primary" onclick="showAddCategoryModal()">
+            <i class="bi bi-plus"></i> 添加类目
+        </button>
+    </div>
     <div class="alert alert-success" th:if="${msg}" th:text="${msg}"></div>
     <div class="alert alert-danger" th:if="${error}" th:text="${error}"></div>
-    <!-- 添加/编辑表单 -->
-    <form class="row g-3 mb-4" method="post"
-          th:action="${editMode} ? @{/product/category/update} : @{/product/category/add}" th:object="${category}">
-        <input th:field="*{id}" type="hidden"/>
-        <div class="col-md-3">
-            <input class="form-control" placeholder="类目名称" required th:field="*{name}" type="text">
-        </div>
-        <div class="col-md-2">
-            <input class="form-control" placeholder="父ID" th:field="*{parentId}" type="number">
-        </div>
-        <div class="col-md-2">
-            <input class="form-control" placeholder="层级" th:field="*{level}" type="number">
-        </div>
-        <div class="col-md-2">
-            <input class="form-control" placeholder="排序" th:field="*{sort}" type="number">
-        </div>
-        <div class="col-md-1">
-            <select class="form-select" th:field="*{status}">
-                <option th:text="'启用'" th:value="1"></option>
-                <option th:text="'禁用'" th:value="0"></option>
-            </select>
-        </div>
-        <div class="col-md-2 d-flex">
-            <button class="btn btn-primary w-100" th:text="${editMode} ? '保存' : '添加'" type="submit"></button>
-            <a class="btn btn-secondary ms-2" th:href="@{/product/category}" th:if="${editMode}">取消</a>
-        </div>
-    </form>
     <!-- 类目列表 -->
     <table class="table table-bordered table-hover">
         <thead class="table-light">
@@ -52,24 +31,150 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="category : ${categories}">
-            <td th:text="${category.id}"></td>
-            <td th:text="${category.name}"></td>
-            <td th:text="${category.parentId}"></td>
-            <td th:text="${category.level}"></td>
-            <td th:text="${category.sort}"></td>
-            <td th:text="${category.status == 1 ? '启用' : '禁用'}"></td>
+        <th:block th:each="parent : ${level1}">
+            <tr>
+                <td th:text="${parent.id}"></td>
+                <td th:text="${parent.name}"></td>
+                <td></td>
+                <td th:text="${parent.level}"></td>
+                <td th:text="${parent.sort}"></td>
+                <td th:text="${parent.status == 1 ? '启用' : '禁用'}"></td>
             <td>
-                <a class="btn btn-sm btn-warning" th:href="@{'/product/category/edit/' + ${category.id}}">编辑</a>
+                <button class="btn btn-sm btn-warning" th:onclick="'showEditCategoryModal(' + ${parent.id} + ')'">
+                    <i class="bi bi-pencil"></i> 编辑
+                </button>
+                <a class="btn btn-sm btn-info"
+                   th:href="@{'/product/attribute/list?categoryId=' + ${parent.id}}">属性管理</a>
                 <form method="post" onsubmit="return confirm('确定要删除该类目吗？')"
-                      style="display:inline-block" th:action="@{'/product/category/delete/' + ${category.id}}">
+                      style="display:inline-block" th:action="@{'/product/category/delete/' + ${parent.id}}">
                     <button class="btn btn-sm btn-danger" type="submit">删除</button>
                 </form>
             </td>
+            </tr>
+            <tr th:each="child : ${parent.children}">
+                <td th:text="${child.id}"></td>
+                <td><span style="padding-left:2em;">├─</span><span th:text="${child.name}"></span></td>
+                <td th:text="${child.parentId}"></td>
+                <td th:text="${child.level}"></td>
+                <td th:text="${child.sort}"></td>
+                <td th:text="${child.status == 1 ? '启用' : '禁用'}"></td>
+                <td>
+                    <button class="btn btn-sm btn-warning" th:onclick="'showEditCategoryModal(' + ${child.id} + ')'">
+                        <i class="bi bi-pencil"></i> 编辑
+                    </button>
+                    <a class="btn btn-sm btn-info"
+                       th:href="@{'/product/attribute/list?categoryId=' + ${child.id}}">属性管理</a>
+                    <form method="post" onsubmit="return confirm('确定要删除该类目吗?')"
+                          style="display:inline-block" th:action="@{'/product/category/delete/' + ${child.id}}">
+                        <button class="btn btn-sm btn-danger" type="submit">删除</button>
+                    </form>
+                </td>
         </tr>
+        </th:block>
         </tbody>
     </table>
 </div>
+
+<!-- 类目添加/编辑Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="categoryModalTitle">添加类目</h5>
+                <button class="btn-close" data-bs-dismiss="modal" type="button"></button>
+            </div>
+            <div class="modal-body">
+                <form id="categoryForm">
+                    <input id="categoryId" name="id" type="hidden">
+                    <div class="mb-3">
+                        <label class="form-label" for="categoryName">类目名称 *</label>
+                        <input class="form-control" id="categoryName" name="name" required type="text">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="parentId">父类目</label>
+                        <select class="form-select" id="parentId" name="parentId">
+                            <option value="">无（顶级类目）</option>
+                            <option th:each="cat : ${categories}" th:if="${cat.level == 1}" th:value="${cat.id}"
+                                    th:text="${cat.name}"></option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="level">层级</label>
+                        <input class="form-control" id="level" name="level" type="number">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="sort">排序</label>
+                        <input class="form-control" id="sort" name="sort" type="number">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="status">状态</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="1">启用</option>
+                            <option value="0">禁用</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">取消</button>
+                <button class="btn btn-primary" onclick="saveCategory()" type="button">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <th:block th:replace="common/footer :: footer"></th:block>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let isEditCategory = false;
+    const categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+
+    function showAddCategoryModal() {
+        isEditCategory = false;
+        document.getElementById('categoryModalTitle').textContent = '添加类目';
+        document.getElementById('categoryForm').reset();
+        document.getElementById('categoryId').value = '';
+        document.getElementById('parentId').value = '';
+        categoryModal.show();
+    }
+
+    function showEditCategoryModal(id) {
+        isEditCategory = true;
+        document.getElementById('categoryModalTitle').textContent = '编辑类目';
+        fetch(`/product/category/detail?id=${id}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('categoryId').value = data.id;
+                document.getElementById('categoryName').value = data.name;
+                document.getElementById('parentId').value = data.parentId || '';
+                document.getElementById('level').value = data.level;
+                document.getElementById('sort').value = data.sort;
+                document.getElementById('status').value = data.status;
+                categoryModal.show();
+            });
+    }
+
+    function saveCategory() {
+        const form = document.getElementById('categoryForm');
+        const formData = new FormData(form);
+        const data = {};
+        formData.forEach((value, key) => data[key] = value);
+
+        const url = isEditCategory ? '/product/category/update' : '/product/category/add';
+        fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        })
+            .then(response => response.text())
+            .then(res => {
+                if (res === 'success') {
+                    location.reload();
+                } else {
+                    alert('操作失败: ' + res);
+                }
+            });
+    }
+</script>
 </body>
 </html> 

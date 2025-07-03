@@ -1,6 +1,7 @@
 package com.example.solrdemo.service;
 
 import com.example.solrdemo.entity.Product;
+import com.example.solrdemo.entity.ProductAttribute;
 import com.example.solrdemo.mapper.ProductMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.solr.client.solrj.SolrClient;
@@ -25,6 +26,8 @@ public class SolrSyncService {
     private SolrClient solrClient;
     @Autowired
     private ProductMapper productMapper;
+    @Autowired
+    private ProductAttributeService productAttributeService;
 
     public void clearAllProducts() throws IOException, SolrServerException {
         // 清空Solr索引
@@ -144,7 +147,27 @@ public class SolrSyncService {
         doc.addField("status", product.getStatus());
         doc.addField("create_time", product.getCreateTime().atZone(ZoneId.of("UTC"))
                 .format(DateTimeFormatter.ISO_INSTANT));
+        
+        // 添加商品属性到Solr文档
+        addProductAttributesToSolrDoc(doc, product.getId());
+        
         return doc;
+    }
+    
+    /**
+     * 将商品属性添加到Solr文档
+     */
+    private void addProductAttributesToSolrDoc(SolrInputDocument doc, Long productId) {
+        try {
+            List<ProductAttribute> attributes = productAttributeService.getAttributesByProductId(productId);
+            for (ProductAttribute attribute : attributes) {
+                String fieldName = "attr_" + attribute.getAttributeCode();
+                doc.addField(fieldName, attribute.getAttributeValue());
+                log.info("添加属性字段到Solr: {} = {}", fieldName, attribute.getAttributeValue());
+            }
+        } catch (Exception e) {
+            log.error("获取商品属性失败: productId={}", productId, e);
+        }
     }
 
     /**

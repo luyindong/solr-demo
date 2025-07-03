@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.solrdemo.mapper.ProductAttributeMapper">
+
+    <resultMap id="BaseResultMap" type="com.example.solrdemo.entity.ProductAttribute">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="attribute_id" property="attributeId" jdbcType="BIGINT"/>
+        <result column="attribute_code" property="attributeCode" jdbcType="VARCHAR"/>
+        <result column="attribute_name" property="attributeName" jdbcType="VARCHAR"/>
+        <result column="attribute_value" property="attributeValue" jdbcType="VARCHAR"/>
+        <result column="attribute_type" property="attributeType" jdbcType="VARCHAR"/>
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, product_id, attribute_id, attribute_code, attribute_name, attribute_value, attribute_type, create_time, update_time
+    </sql>
+
+    <select id="selectByProductId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_attribute
+        WHERE product_id = #{productId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="selectByProductIds" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM product_attribute
+        WHERE product_id IN
+        <foreach collection="productIds" item="productId" open="(" separator="," close=")">
+            #{productId}
+        </foreach>
+        ORDER BY product_id ASC, id ASC
+    </select>
+
+    <select id="selectProductIdsByAttribute" resultType="java.lang.Long">
+        SELECT DISTINCT product_id
+        FROM product_attribute
+        WHERE attribute_code = #{attributeCode} AND attribute_value = #{attributeValue}
+    </select>
+
+    <select id="selectProductIdsByAttributeRange" resultType="java.lang.Long">
+        SELECT DISTINCT product_id
+        FROM product_attribute
+        WHERE attribute_code = #{attributeCode}
+        <if test="minValue != null and minValue != ''">
+            AND CAST(attribute_value AS DECIMAL) >= CAST(#{minValue} AS DECIMAL)
+        </if>
+        <if test="maxValue != null and maxValue != ''">
+            AND CAST(attribute_value AS DECIMAL) &lt;= CAST(#{maxValue} AS DECIMAL)
+        </if>
+    </select>
+
+    <select id="selectProductIdsByAttributeValues" resultType="java.lang.Long">
+        SELECT DISTINCT product_id
+        FROM product_attribute
+        WHERE attribute_code = #{attributeCode}
+        AND attribute_value IN
+        <foreach collection="attributeValues" item="value" open="(" separator="," close=")">
+            #{value}
+        </foreach>
+    </select>
+
+    <insert id="batchInsert" parameterType="java.util.List">
+        INSERT INTO product_attribute (
+            product_id, attribute_id, attribute_code, attribute_name, attribute_value, attribute_type, create_time, update_time
+        ) VALUES
+        <foreach collection="attributes" item="attr" separator=",">
+            (#{attr.productId}, #{attr.attributeId}, #{attr.attributeCode}, #{attr.attributeName}, #{attr.attributeValue}, #{attr.attributeType}, NOW(), NOW())
+        </foreach>
+    </insert>
+
+    <update id="update" parameterType="com.example.solrdemo.entity.ProductAttribute">
+        UPDATE product_attribute
+        SET product_id = #{productId},
+            attribute_id = #{attributeId},
+            attribute_code = #{attributeCode},
+            attribute_name = #{attributeName},
+            attribute_value = #{attributeValue},
+            attribute_type = #{attributeType},
+            update_time = NOW()
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteByProductId">
+        DELETE FROM product_attribute WHERE product_id = #{productId}
+    </delete>
+
+    <delete id="deleteById">
+        DELETE FROM product_attribute WHERE id = #{id}
+    </delete>
+
+</mapper> 
